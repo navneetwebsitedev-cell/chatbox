@@ -496,7 +496,26 @@ function live(){
  .on("postgres_changes",{event:"INSERT",schema:"public",table:"profiles"},({new:p})=>{if(!profiles.some(x=>x.id===p.id)){profiles.push({id:p.id,username:p.username,avatar_url:p.avatar_url,is_admin:p.is_admin});renderUsers()}})
  .on("postgres_changes",{event:"UPDATE",schema:"public",table:"profiles"},({new:p})=>{const x=profiles.find(y=>y.id===p.id);if(x){x.username=p.username;x.avatar_url=p.avatar_url;x.is_admin=p.is_admin;if(peer&&peer.id===p.id){setName($("pn"),p.username,p.is_admin);avatar($("pav"),p.username,0,p.avatar_url)}renderUsers()}})
  .on("postgres_changes",{event:"DELETE",schema:"public",table:"profiles"},({old:p})=>{profiles=profiles.filter(x=>x.id!==p.id);convos.delete(p.id);if(peer&&peer.id===p.id)closeChat();renderUsers()})
- .subscribe(async s=>{if(s==="SUBSCRIBED")await chan.track({at:Date.now()});if(s==="CHANNEL_ERROR")toast("Live connection lost. Refresh to reconnect.")});
+.subscribe(async s=>{
+  console.log("CHATSPACE REALTIME STATUS:",s);
+
+  if(s==="SUBSCRIBED"){
+    console.log("Realtime connected successfully!");
+    await chan.track({at:Date.now()});
+  }
+
+  if(s==="CHANNEL_ERROR"){
+    console.error("Realtime channel error");
+  }
+
+  if(s==="TIMED_OUT"){
+    console.error("Realtime connection timed out");
+  }
+
+  if(s==="CLOSED"){
+    console.warn("Realtime channel closed");
+  }
+});
  if(tchan)sb.removeChannel(tchan);
  tchan=sb.channel("chat-themes").on("postgres_changes",{event:"*",schema:"public",table:"chat_themes"},({new:r})=>{
   if(!r||(r.user_a!==me.id&&r.user_b!==me.id))return;const pid=r.user_a===me.id?r.user_b:r.user_a;shared.set(pid,r);
